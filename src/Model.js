@@ -1,4 +1,4 @@
-import Rx from 'rxjs'
+import Rx from 'rxjs/Rx'
 import setComputedProperty from './functions/setComputedProperty'
 export default class Model {
     constructor(name, options = { structure: {}, computed: {} }) {
