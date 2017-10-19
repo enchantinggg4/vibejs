@@ -63,9 +63,11 @@ To do this, we need to define `Struct`
 
 ```javascript=
 const groupStruct = new Struct({
-    name: types.String,
-    author: types.Reference('User'),
-    users: types.Array(types.Reference('User'))
+   structure: {
+        name: types.String,
+        author: types.Reference('User'),
+        users: types.Array(types.Reference('User'))
+    } 
 }, Store);
 const group = groupStruct.observe();
 group.author = petya;
