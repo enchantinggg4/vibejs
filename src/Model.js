@@ -1,8 +1,9 @@
 import Rx from 'rxjs'
-
+import setComputedProperty from './functions/setComputedProperty'
 export default class Model {
-    constructor(name, options = { id: true, structure: {} }) {
+    constructor(name, options = { structure: {}, computed: {} }) {
         this.name = name;
+        this.computed = options.computed;
         this.structure = options.structure;
         this.store = null;
         this.structure.id = types.Identificator
@@ -68,6 +69,7 @@ export default class Model {
         });
         return skeleton;
     }
+
 
     observe(id) {
         if (!this.store.entityExists(this.name, id)) {
@@ -217,6 +219,9 @@ export default class Model {
             } else
                 setObservableAttribute(reactiveItem, key, this.structure[key]);
         });
+        Object.keys(model.computed).forEach(key => {
+            setComputedProperty(reactiveItem, key, model.computed[key])
+        })
         return reactiveItem;
     }
 }

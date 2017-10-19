@@ -4,7 +4,7 @@ import EntityStore from '../src/EntityStore'
 import Struct from '../src/Struct'
 
 
-describe('Struct', function () {
+describe('Struct reactivity', function () {
     const User = new Model('User', {
         id: true,
         structure: {
@@ -12,17 +12,14 @@ describe('Struct', function () {
         }
     });
 
-
-
-    const Store = new EntityStore([User]);
-
-
     const databaseStruct = new Struct({
         name: types.String,
-        users: types.Array(types.Reference('User'))
-    }, Store);
+        user: types.Reference('User')
+    });
 
     const db = databaseStruct.observe();
+
+    const Store = new EntityStore([User]);
     const vasya = User.observe(1);
     const petya = User.observe(2);
 
@@ -35,16 +32,20 @@ describe('Struct', function () {
         name: "Petya"
     });
 
-    it('should have no users and empty name ', function(){
+    it('should have no user and empty name ', function(){
         assert.equal(db.name, "");
-        assert.equal(db.users.length, 0);
+        assert.equal(db.user, null);
     });
-    it('should have new name', function(){
-        db.name = "new db";
-        assert.equal(db.name, "new db");
-    });
-    it('should have users', function(){
-        db.users = [vasya, petya];
-        assert.deepEqual(db.users[0].name, vasya.name);
-    });
+
+    // it('should update when relation changed', function(done){
+    //     new Promise((resolve, reject) => {
+    //         db.user = User.observe(1);
+    //         db.$observable.subscribe(change => {
+    //             console.log(db);
+    //             assert.equal(db.user.name, "lol");
+    //             resolve()
+    //         });
+    //         db.user.name = "lol"
+    //     }).then(done)
+    // });
 })
