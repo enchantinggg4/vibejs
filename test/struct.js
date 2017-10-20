@@ -6,7 +6,6 @@ import Struct from '../src/Struct'
 
 describe('Struct', function () {
     const User = new Model('User', {
-        id: true,
         structure: {
             name: types.String
         }
