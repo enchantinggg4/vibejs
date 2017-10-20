@@ -1,7 +1,7 @@
 require('babel-register')
 module.exports = {
-    EntityStore: require('./src/EntityStore').default,
-    Model: require('./src/Model').default,
-    types: require('./src/Model').types,
-    Struct: require('./src/Struct').default,
+    EntityStore: require('./EntityStore').default,
+    Model: require('./Model').default,
+    types: require('./Model').types,
+    Struct: require('./Struct').default,
 }
