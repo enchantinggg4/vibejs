@@ -1,9 +1,8 @@
-import {types} from '../Model';
+import { types } from '../Model';
 
 const setObservableAttribute = (item, key, type, stateProvider, updateState, store) => {
     Object.defineProperty(item, key, {
         get() {
-
             return stateProvider()[key];
         },
         set(value) {
@@ -23,7 +22,7 @@ const setObservableReference = (item, key, type, stateProvider, updateState, sto
             return null;
         },
         set(value) {
-            if(subscriber)
+            if (subscriber)
                 subscriber.unsubscribe();
 
             const isNumber = (v) => typeof (v) === 'number' || v instanceof Number
@@ -34,9 +33,9 @@ const setObservableReference = (item, key, type, stateProvider, updateState, sto
                 // nullate relation
                 stateProvider()[key] = null;
             } else {
-                if (value.id) 
+                if (value.id)
                     stateProvider()[key] = value.id;
-                else 
+                else
                     throw new Error("Expected object with identificator, got", value);
             }
 
@@ -47,7 +46,6 @@ const setObservableReference = (item, key, type, stateProvider, updateState, sto
                     updateState();
                 })
             }
-
             updateState();
         }
     })
@@ -62,23 +60,23 @@ const setObservableReferenceArray = (item, key, type, stateProvider, updateState
         },
         set(value) {
             subscribers.forEach(it => it.unsubscribe());
-            if(Array.isArray(value)){
-                if(value.length === 0){
+            if (Array.isArray(value)) {
+                if (value.length === 0) {
                     stateProvider()[key] = [];
-                }else{
+                } else {
                     stateProvider()[key] = value.map(item => {
                         const isNumber = (v) => typeof (v) === 'number' || v instanceof Number
-                        if(isNumber(item)){
+                        if (isNumber(item)) {
                             //set by id
                             return item
-                        }else if(!item){
+                        } else if (!item) {
                             return null;
-                        }else {
+                        } else {
                             return item.id
                         }
                     });
                 }
-            }else{
+            } else {
                 throw new Error("Expected array got ", value)
             }
             subscribers = stateProvider()[key].map(id => {
@@ -104,8 +102,12 @@ const setFreezedId = (item, value) => {
 }
 
 
+const setObservableObject = (item, key, stateProvider, updateState, store) => {
+    createObservable(item[key],)
+}
 
-export default function(reactiveItem={}, structure, stateProvider, updateState, store){
+
+export default function createObservable (reactiveItem = {}, structure, stateProvider, updateState, store) {
     Object.keys(structure).forEach(key => {
         if (structure[key].type === types.Reference().type) {
             setObservableReference(reactiveItem, key, structure[key], stateProvider, updateState, store);
@@ -115,10 +117,42 @@ export default function(reactiveItem={}, structure, stateProvider, updateState, 
             console.log("Just array of shit.")
         } else if (structure[key].type === types.Identificator.type) {
             setFreezedId(reactiveItem, reactiveItem["id"]);
-        } else{
+        } else if (structure[key].type === types.String.type) {
             setObservableAttribute(reactiveItem, key, structure[key], stateProvider, updateState, store);
+        } else if (structure[key].type === types.Number.type) {
+            setObservableAttribute(reactiveItem, key, structure[key], stateProvider, updateState, store);
+        } else if (structure[key].type === types.Boolean.type) {
+            setObservableAttribute(reactiveItem, key, structure[key], stateProvider, updateState, store);
+        } else {
+            reactiveItem[key] = createObservable({}, structure[key], () => stateProvider()[key], updateState, store);
         }
-            
+
     });
+    reactiveItem.$json = function(){
+        const json = {};
+        Object.keys(structure).forEach(key => {
+            if (structure[key].type === 'Reference') {
+                if (this[key]) {
+                    json[key] = this[key].$json();
+                } else {
+                    json[key] = null;
+                }
+            }else if (structure[key].type === 'Array' && structure[key].arrayOfType.type === types.Reference().type) {
+                json[key] = this[key].map(it => {
+                    if (it) {
+                        return it.$json();
+                    } else {
+                        return null;
+                    }
+                })
+            
+            }else if(this[key].$json){
+                json[key] = this[key].$json();
+            }else{
+                json[key] = reactiveItem[key];
+            }
+        });
+        return json;
+    }
     return reactiveItem;
 }

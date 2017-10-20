@@ -18,7 +18,7 @@ export default class Model {
     }
 
     insertEntity(item) {
-        const validation = this.validateItem(item);
+        const validation = this.validateItem(item, this.structure);
         if (validation) {
             Object.keys(this.structure).forEach(key => {
                 if (!item[key])
@@ -30,43 +30,52 @@ export default class Model {
         }
     }
 
-    validateKeyValue(key, value) {
-        if (this.structure[key].type === types.Identificator.type && types.Identificator.check(value)) {
+    validateKeyValue(structure, key, value) {
+        if (structure[key].type === types.Identificator.type && types.Identificator.check(value)) {
             return true
-        } else if (this.structure[key].type === types.String.type && types.String.check(value)) {
+        } else if (structure[key].type === types.String.type && types.String.check(value)) {
             return true
-        } else if (this.structure[key].type === types.Number.type && types.Number.check(value)) {
+        } else if (structure[key].type === types.Number.type && types.Number.check(value)) {
             return true
-        } else if (this.structure[key].type === types.Boolean.type && types.Boolean.check(value)) {
+        } else if (structure[key].type === types.Boolean.type && types.Boolean.check(value)) {
             return true
-        } else if (this.structure[key].type === types.Array().type && this.structure[key].check(value)) {
+        } else if (structure[key].type === types.Array().type && structure[key].check(value)) {
             return true
-        } else if (this.structure[key].type === types.Reference().type && types.Reference().check(value)) {
+        } else if (structure[key].type === types.Reference().type && types.Reference().check(value)) {
             return true
         } else {
-            return false
+            return this.validateItem(value, structure[key])
         }
     }
 
-    validateItem(item) {
-        return Object.keys(item).map(key => {
-            const value = item[key];
-            return this.validateKeyValue(key, value)
-        }).reduce((a, b) => a && b);
+    validateItem(item, structure) {
+        if (item)
+            return Object.keys(item).map(key => {
+                const value = item[key];
+                return this.validateKeyValue(structure, key, value)
+            }).reduce((a, b) => a && b);
+        else
+            return false
     }
 
 
-    defaultStructure(id) {
-        const skeleton = {
-            id: id
-        };
-        Object.keys(this.structure).forEach(key => {
-            if (this.structure[key].type == types.Identificator.type) {
+    defaultStructure(structure) {
+        const skeleton = {};
+        Object.keys(structure).forEach(key => {
+            if (structure[key].type == types.Identificator.type) {
 
-            } else if (this.structure[key].type == types.Reference.type) {
-                skeleton[key] = this.structure[key].default();
+            } else if (structure[key].type == types.Reference().type) {
+                skeleton[key] = structure[key].default();
+            } else if (structure[key].type == types.String.type) {
+                skeleton[key] = structure[key].default();
+            } else if (structure[key].type == types.Number.type) {
+                skeleton[key] = structure[key].default();
+            } else if (structure[key].type == types.Boolean.type) {
+                skeleton[key] = structure[key].default();
+            } else if (structure[key].type == types.Array().type) {
+                skeleton[key] = structure[key].default();
             } else {
-                skeleton[key] = this.structure[key].default();
+                skeleton[key] = this.defaultStructure(structure[key]);
             }
 
         });
@@ -76,7 +85,10 @@ export default class Model {
 
     observe(id) {
         if (!this.store.entityExists(this.name, id))
-            this.insertEntity(this.defaultStructure(id));
+            this.insertEntity({
+                id: id,
+                ...this.defaultStructure(this.structure)
+            });
 
 
 
@@ -89,7 +101,12 @@ export default class Model {
             observable.next();
         })
 
-        const reactiveItem = createObservable(placeholder, this.structure, () => this.store.heap[this.name][id], () => observable.next(), this.store);
+        const reactiveItem = createObservable(
+            placeholder,
+            this.structure,
+            () => this.store.heap[this.name][id],
+            () => this.store.updateEntity(this.name, id),
+            this.store);
 
         Object.keys(this.computed).forEach(key => {
             setComputedProperty(reactiveItem, key, this.computed[key])
@@ -103,30 +120,7 @@ export default class Model {
             }
         });
 
-        reactiveItem["$json"] = () => {
-            const json = {};
-            Object.keys(this.structure).forEach(key => {
-                if (this.structure[key].type === 'Reference') {
-                    if (this[key]) {
-                        json[key] = this[key].$json();
-                    } else {
-                        json[key] = null;
-                    }
-                }else if (this.structure[key].type === 'Array' && this.structure[key].arrayOfType.type === types.Reference().type) {
-                    json[key] = this[key].map(it => {
-                        if (it) {
-                            return it.$json();
-                        } else {
-                            return null;
-                        }
-                    })
-                
-                }else{
-                    json[key] = reactiveItem[key];
-                }
-            });
-            return json;
-        }
+
         return reactiveItem;
     }
 }

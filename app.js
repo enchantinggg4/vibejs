@@ -6,38 +6,32 @@ import createObservable from './src/functions/createObservable';
 const User = new Model('User', {
     id: true,
     structure: {
-        name: types.String,
-        friend: types.Reference('User')
-    },
-    computed: {
-        upperCaseName() {
-            return this.name.toUpperCase();
+        attributes: {
+            name: types.String
+        },
+        relationships: {
+            friend: types.Reference('User')
         }
-    }
+    },
 });
 const Store = new EntityStore([User]);
 
-const vasya = User.observe(1);
-// const petya = User.observe(2);
-
-User.insertEntity({
-    id: 1,
-    name: "Vasya"
-});
-
-const dbstruct = new Struct({
+const databaseStruct = new Struct({
     structure: {
-        name: types.String,
-        friends: types.Array(types.Reference('User'))
+        attributes: {
+            name: types.String,
+        },
+        users: types.Array(types.Reference('User'))
     }
-}, Store)
+}, Store);
 
-const db = dbstruct.observe();
+const db = databaseStruct.observe();
 
-
+const vasya = User.observe(1);
+const petya = User.observe(2);
 
 db.$observable.subscribe(_ => {
-    console.log("Hello", db.friends[0].$json())
-})
+    console.log(db.$json())
+});
 
-db.friends = [vasya];
+
