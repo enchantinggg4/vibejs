@@ -1,7 +1,7 @@
 {
-  "name": "vibe",
+  "name": "vibejs",
   "version": "1.0.0",
-  "description": "",
+  "description": "State management library for javascript",
   "main": "index.js",
   "scripts": {
     "test": "mocha --compilers js:babel-core/register"

@@ -1,5 +1,10 @@
 # Vibe
 
+## Install
+
+`yarn add vibejs`
+`npm install vibejs`
+
 Hi there, this is reactive state management tool for JavaScript.
 
 There are 3 core concepts:
