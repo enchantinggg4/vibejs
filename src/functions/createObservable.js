@@ -156,5 +156,28 @@ export default function createObservable (reactiveItem = {}, structure, statePro
         });
         return json;
     }
+    reactiveItem.$merge = function(objectToMerge){
+        Object.keys(objectToMerge).forEach(key => {
+            if (structure[key].type === types.Reference().type) {
+                reactiveItem[key] = objectToMerge[key];
+            } else if (structure[key].type === types.Array().type && structure[key].arrayOfType.type === types.Reference().type) {
+                // todo array methods proxy
+                reactiveItem[key] = objectToMerge[key];
+            } else if (structure[key].type === types.Array().type && structure[key].arrayOfType.type !== types.Reference().type) {
+                // todo array methods proxy
+                reactiveItem[key] = objectToMerge[key];
+            } else if (structure[key].type === types.Identificator.type) {
+                
+            } else if (structure[key].type === types.String.type) {
+                reactiveItem[key] = objectToMerge[key];
+            } else if (structure[key].type === types.Number.type) {
+                reactiveItem[key] = objectToMerge[key];
+            } else if (structure[key].type === types.Boolean.type) {
+                reactiveItem[key] = objectToMerge[key];
+            } else {
+                reactiveItem[key].$merge(objectToMerge[key]);
+            }
+        })
+    }
     return reactiveItem;
 }
