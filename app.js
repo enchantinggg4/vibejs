@@ -21,6 +21,7 @@ const databaseStruct = new Struct({
         attributes: {
             name: types.String,
         },
+        shit: types.Array(types.Number),
         users: types.Array(types.Reference('User'))
     }
 }, Store);
@@ -31,7 +32,7 @@ const vasya = User.observe(1);
 const petya = User.observe(2);
 
 db.$observable.subscribe(_ => {
-    console.log(db.$json())
+    console.log(db.shit)
 });
 
-
+db.shit = [123, 413]

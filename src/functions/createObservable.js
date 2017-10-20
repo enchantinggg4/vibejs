@@ -112,9 +112,11 @@ export default function createObservable (reactiveItem = {}, structure, statePro
         if (structure[key].type === types.Reference().type) {
             setObservableReference(reactiveItem, key, structure[key], stateProvider, updateState, store);
         } else if (structure[key].type === types.Array().type && structure[key].arrayOfType.type === types.Reference().type) {
+            // todo array methods proxy
             setObservableReferenceArray(reactiveItem, key, structure[key], stateProvider, updateState, store);
         } else if (structure[key].type === types.Array().type && structure[key].arrayOfType.type !== types.Reference().type) {
-            console.log("Just array of shit.")
+            // todo array methods proxy
+            setObservableAttribute(reactiveItem, key, structure[key], stateProvider, updateState, store);
         } else if (structure[key].type === types.Identificator.type) {
             setFreezedId(reactiveItem, reactiveItem["id"]);
         } else if (structure[key].type === types.String.type) {
