@@ -5,7 +5,6 @@ import EntityStore from '../src/EntityStore'
 
 describe('Model with array relationship', function () {
     const User = new Model('User', {
-        id: true,
         structure: {
             name: types.String,
             friends: types.Array(types.Reference('User')),
@@ -32,7 +31,9 @@ describe('Model with array relationship', function () {
 
     it('should have 1 friend', function(){
         vasya.friends = [petya];
-        assert.deepEqual(vasya.friends, [petya]);
+        console.log(Store.heap);
+        console.log("HELP ME PLEASE", petya);
+        assert.equal(vasya.friends[0].name, petya.name);
     });
 
     it('should change after friend change', function(){

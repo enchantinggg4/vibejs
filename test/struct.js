@@ -18,8 +18,10 @@ describe('Struct', function () {
 
 
     const databaseStruct = new Struct({
-        name: types.String,
-        users: types.Array(types.Reference('User'))
+        structure: {
+            name: types.String,
+            users: types.Array(types.Reference('User'))
+        }
     }, Store);
 
     const db = databaseStruct.observe();
@@ -36,7 +38,7 @@ describe('Struct', function () {
     });
 
     it('should have no users and empty name ', function(){
-        assert.equal(db.name, "");
+        assert.equal(db.name, '');
         assert.equal(db.users.length, 0);
     });
     it('should have new name', function(){

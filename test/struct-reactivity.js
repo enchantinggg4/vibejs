@@ -33,7 +33,7 @@ describe('Struct reactivity', function () {
     });
 
     it('should have no user and empty name ', function(){
-        assert.equal(db.name, "");
+        assert.equal(db.name, undefined);
         assert.equal(db.user, null);
     });
 

@@ -1,14 +1,17 @@
 import Rx from 'rxjs/Rx'
 import setComputedProperty from './functions/setComputedProperty'
+import createObservable from './functions/createObservable';
+
 export default class Model {
     constructor(name, options = { structure: {}, computed: {} }) {
         this.name = name;
-        this.computed = options.computed;
-        this.structure = options.structure;
+        this.computed = options.computed || {};
+        this.structure = options.structure || {};
         this.store = null;
         this.structure.id = types.Identificator
 
     }
+
 
     attachStore(store) {
         this.store = store;
@@ -18,7 +21,7 @@ export default class Model {
         const validation = this.validateItem(item);
         if (validation) {
             Object.keys(this.structure).forEach(key => {
-                if(!item[key])
+                if (!item[key])
                     item[key] = this.structure[key].default()
             })
             this.store.pushToHeap(this.name, item);
@@ -27,7 +30,7 @@ export default class Model {
         }
     }
 
-    validateKeyValue(key, value){
+    validateKeyValue(key, value) {
         if (this.structure[key].type === types.Identificator.type && types.Identificator.check(value)) {
             return true
         } else if (this.structure[key].type === types.String.type && types.String.check(value)) {
@@ -72,156 +75,58 @@ export default class Model {
 
 
     observe(id) {
-        if (!this.store.entityExists(this.name, id)) {
+        if (!this.store.entityExists(this.name, id))
             this.insertEntity(this.defaultStructure(id));
-        }
 
-        const model = this;
-        const store = this.store;
 
-        const setObservableAttribute = (item, key, type) => {
-            Object.defineProperty(item, key, {
-                get() {
-                    if (store.heap[model.name][item.id])
-                        return store.heap[model.name][item.id][key];
-                    return model.structure[key].default();
-                },
-                set(value) {
-                    if (store.heap[model.name][item.id]) {
-                        store.heap[model.name][item.id][key] = value;
-                        store.updateEntity(model.name, item.id)
-                    }
-                }
-            })
-        };
-
-        const setObservableReference = (item, key, ref) => {
-            Object.defineProperty(item, key, {
-                get() {
-                    const refId = store.heap[model.name][item.id][key];
-                    if (refId)
-                        return store.models[model.structure[key].model].observe(refId);
-                    return null;
-                },
-                set(value) {
-                    const isNumber = (v) => typeof (v) === 'number' || v instanceof Number
-                    if (isNumber(value)) {
-                        // reference by id
-                        store.heap[model.name][item.id][key] = value;
-                    } else if (!value) {
-                        // nullate relation
-                        store.heap[model.name][item.id][key] = null;
-                    } else {
-                        if (value.id) {
-                            store.heap[model.name][item.id][key] = value.id;
-                        } else {
-                            throw new Error("Expected object with identificator, got", value);
-                        }
-                    }
-
-                    const refId = store.heap[model.name][item.id][key]
-
-                    if (refId) {
-                        store.subscribeEntity(ref.model, refId).subscribe(_ => {
-                            store.updateEntity(model.name, item.id)
-                        })
-                    }
-
-                    store.updateEntity(model.name, item.id)
-                }
-            })
-        };
-
-        const setObservableReferenceArray = (item, key, ref) => {
-            Object.defineProperty(item, key, {
-                get() {
-                    const refsID = store.heap[model.name][item.id][key];
-                    return refsID.map(id => store.models[ref.arrayOfType.model].observe(id));
-                },
-                set(value) {
-                    if(Array.isArray(value)){
-                        if(value.length === 0){
-                            store.heap[model.name][item.id][key] = [];
-                        }else{
-                            store.heap[model.name][item.id][key] = value.map(item => {
-                                const isNumber = (v) => typeof (v) === 'number' || v instanceof Number
-                                if(isNumber(item)){
-                                    //set by id
-                                    return item
-                                }else if(!item){
-                                    return null;
-                                }else {
-                                    return item.id
-                                }
-                            });
-                        }
-                    }else{
-                        throw new Error("Expected array got ", value)
-                    }
-                    store.heap[model.name][item.id][key].forEach(id => {
-                        store.subscribeEntity(ref.arrayOfType.model, id).subscribe(_ => {
-                            store.updateEntity(model.name, item.id)
-                        })
-                    })
-                    store.updateEntity(model.name, item.id)
-                }
-            })
-        };
-
-        const setFreezedId = (item, value) => {
-            Object.defineProperty(item, 'id', {
-                get() {
-                    return value;
-                },
-                set(value) {
-                    // ignore set, it's immutable
-                }
-            })
-        }
 
         const observable = new Rx.Subject();
-        const reactiveItem = {
-            $observable: store.subscribeEntity(model.name, id),
-            $json() {
-                const json = {};
-                Object.keys(model.structure).forEach(key => {
-                    if (model.structure[key].type === 'Reference') {
-                        if (this[key]) {
-                            json[key] = this[key].$json();
-                        } else {
-                            json[key] = null;
-                        }
-                    }else if (model.structure[key].type === 'Array' && model.structure[key].arrayOfType.type === types.Reference().type) {
-                        json[key] = this[key].map(it => {
-                            if (it) {
-                                return it.$json();
-                            } else {
-                                return null;
-                            }
-                        })
-                        
-                    }else
-                        json[key] = this[key];
-                });
-                return json;
-            }
+        const placeholder = {
+            id: id
         };
-        setFreezedId(reactiveItem, id);
-        Object.keys(model.structure).forEach(key => {
-            if (model.structure[key].type === types.Reference().type) {
-                setObservableReference(reactiveItem, key, this.structure[key]);
-            } else if (model.structure[key].type === types.Array().type && model.structure[key].type === types.Reference().type) {
-                setObservableReferenceArray(reactiveItem, key, this.structure[key]);
-            } else if (model.structure[key].type === types.Array().type && model.structure[key].type !== types.Reference().type) {
-                setObservableAttribute(reactiveItem, key, this.structure[key]);
-            } else if (model.structure[key].type === types.Identificator.type) {
 
-            } else
-                setObservableAttribute(reactiveItem, key, this.structure[key]);
-        });
-        Object.keys(model.computed).forEach(key => {
-            setComputedProperty(reactiveItem, key, model.computed[key])
+        this.store.subscribeEntity(this.name, id).subscribe(a => {
+            observable.next();
         })
+
+        const reactiveItem = createObservable(placeholder, this.structure, () => this.store.heap[this.name][id], () => observable.next(), this.store);
+
+        Object.keys(this.computed).forEach(key => {
+            setComputedProperty(reactiveItem, key, this.computed[key])
+        });
+        Object.defineProperty(reactiveItem, "$observable", {
+            get() {
+                return observable;
+            },
+            set() {
+
+            }
+        });
+
+        reactiveItem["$json"] = () => {
+            const json = {};
+            Object.keys(this.structure).forEach(key => {
+                if (this.structure[key].type === 'Reference') {
+                    if (this[key]) {
+                        json[key] = this[key].$json();
+                    } else {
+                        json[key] = null;
+                    }
+                }else if (this.structure[key].type === 'Array' && this.structure[key].arrayOfType.type === types.Reference().type) {
+                    json[key] = this[key].map(it => {
+                        if (it) {
+                            return it.$json();
+                        } else {
+                            return null;
+                        }
+                    })
+                
+                }else{
+                    json[key] = reactiveItem[key];
+                }
+            });
+            return json;
+        }
         return reactiveItem;
     }
 }
@@ -265,10 +170,10 @@ export const types = {
         return {
             type: 'Array',
             arrayOfType: Type,
-            check(value){
+            check(value) {
                 return Array.isArray(value) && (value.length === 0 || this.arrayOfType.check(value[0]));
             },
-            default(){
+            default() {
                 return [];
             }
         }
