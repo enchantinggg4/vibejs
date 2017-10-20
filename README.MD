@@ -17,7 +17,7 @@ There are 3 core concepts:
 Model is description of entity.
 
 You can describe it like this:
-```javascript=
+```js
 const User = new Model('User', {
     structure: {
         name: types.String,
@@ -30,7 +30,7 @@ const User = new Model('User', {
 
 After this, you can insert new entity and observe it.
 
-```javascript=
+```js
 User.insertEntity({
     id: 1,
     name: "Vasya",
@@ -51,7 +51,7 @@ Need to say, you can observe entity which doesn't exist yet - you will get defau
 
 At this point you already can use `vasya` to access and change reactive data. For example
 
-```javascript=
+```js
 User.insertEntity({
     id: 2,
     name: "Petya"
@@ -66,7 +66,7 @@ But we want to compose different data, like models or just primitives.
 
 To do this, we need to define `Struct`
 
-```javascript=
+```js
 const groupStruct = new Struct({
    structure: {
         name: types.String,
@@ -85,14 +85,14 @@ So, at some point it's nice already.
 But what about changes? Nice question. Reacting only for necessary data changes is core point of Vibe. 
 
 Here are examples how you subscribe to changes of entity
-```javascript=
+```js
 vasya.$observable.subscribe(entity => {
     console.log("Hey there! My relation or attribute has changed!");
 })
 ```
 
 ... or to struct
-```javascript=
+```js
 group.$observable.subscribe(struct => {
     console.log("Hey again! Something changed in my structure!");
 });
