@@ -51,4 +51,9 @@ export default class EntityStore{
     entityExists(name, id){
         return !!this.heap[name][id];
     }
+
+
+    toJSON(){
+        return this.heap
+    }
 }
