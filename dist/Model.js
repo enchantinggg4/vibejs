@@ -126,8 +126,13 @@ var Model = function () {
                 id: id
             };
 
-            this.store.subscribeEntity(this.name, id).subscribe(function (a) {
-                observable.next();
+            this.store.subscribeEntity(this.name, id).subscribe(function (value) {
+                observable.next(value);
+            }, function (err) {
+                observable.error(err);
+            }, function () {
+                observable.complete();
+                // clear all subscriptions and just jsonify it
             });
 
             var reactiveItem = (0, _createObservable2.default)(placeholder, this.structure, function () {
@@ -135,6 +140,10 @@ var Model = function () {
             }, function () {
                 return _this4.store.updateEntity(_this4.name, id);
             }, this.store);
+
+            reactiveItem.$delete = function () {
+                this.store.deleteEntity(this.name, reactiveItem.id);
+            }.bind(this);
 
             Object.keys(this.computed).forEach(function (key) {
                 (0, _setComputedProperty2.default)(reactiveItem, key, _this4.computed[key]);

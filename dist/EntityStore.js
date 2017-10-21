@@ -43,6 +43,12 @@ var EntityStore = function () {
             if (observable) observable.next(this.heap[name][value.id]);
         }
     }, {
+        key: 'deleteEntity',
+        value: function deleteEntity(name, id) {
+            delete this.heap[name][id];
+            this.deleteObservable(name, id);
+        }
+    }, {
         key: 'subscribeEntity',
         value: function subscribeEntity(name, id) {
             if (!this.getEntityObservable(name, id)) return this.createEntityObservable(name, id);
@@ -66,6 +72,18 @@ var EntityStore = function () {
         value: function updateEntity(name, id) {
             var observable = this.getEntityObservable(name, id);
             if (observable) observable.next(this.heap[name][id]);
+        }
+    }, {
+        key: 'deleteObservable',
+        value: function deleteObservable(name, id) {
+            var observableKey = JSON.stringify({ name: name, id: id });
+            if (this.observables[observableKey]) {
+                this.observables[observableKey].complete();
+                this.observables[observableKey].observers.forEach(function (subscriber) {
+                    subscriber.unsubscribe();
+                });
+            }
+            delete this.observables[observableKey];
         }
     }, {
         key: 'entityExists',

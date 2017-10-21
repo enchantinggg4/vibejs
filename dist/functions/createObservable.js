@@ -10,6 +10,10 @@ var _Model = require('../Model');
 
 var _typeChecker = require('./typeChecker');
 
+var warnNoEntity = function warnNoEntity(name, id) {
+    console.warn("Trying to modify deleted entity", name, id);
+};
+
 var transformAttribute = exports.transformAttribute = function transformAttribute(attribute) {
     return attribute;
 };
@@ -40,11 +44,18 @@ var transformReferenceArray = exports.transformReferenceArray = function transfo
 var setObservableAttribute = function setObservableAttribute(item, key, type, stateProvider, updateState, store) {
     Object.defineProperty(item, key, {
         get: function get() {
-            return stateProvider()[key];
+            if (stateProvider()) {
+                this['_' + key] = stateProvider()[key];
+            }
+            return this['_' + key];
         },
         set: function set(value) {
-            stateProvider()[key] = transformAttribute(value);
-            updateState();
+            if (stateProvider()) {
+                stateProvider()[key] = transformAttribute(value);
+                updateState();
+            } else {
+                warnNoEntity(item);
+            }
         }
     });
 };
@@ -53,22 +64,27 @@ var setObservableReference = function setObservableReference(item, key, type, st
     var subscriber = null;
     Object.defineProperty(item, key, {
         get: function get() {
-            var referenceID = stateProvider()[key];
-            if (referenceID) return store.models[type.model].observe(referenceID);
-            return null;
+            if (stateProvider()) {
+                var referenceID = stateProvider()[key];
+                if (referenceID) this['_' + key] = store.models[type.model].observe(referenceID);else this['_' + key] = null;
+            }
+            return this['_' + key];
         },
         set: function set(value) {
             if (subscriber) subscriber.unsubscribe();
 
             var referenceID = transformReference(value);
-            stateProvider()[key] = referenceID;
-
-            if (referenceID) {
-                subscriber = store.subscribeEntity(type.model, referenceID).subscribe(function (_) {
-                    updateState();
-                });
+            if (stateProvider()) {
+                stateProvider()[key] = referenceID;
+                if (referenceID) {
+                    subscriber = store.subscribeEntity(type.model, referenceID).subscribe(function (_) {
+                        updateState();
+                    });
+                }
+                updateState();
+            } else {
+                warnNoEntity(item);
             }
-            updateState();
         }
     });
 };
@@ -77,23 +93,30 @@ var setObservableReferenceArray = function setObservableReferenceArray(item, key
     var subscribers = [];
     Object.defineProperty(item, key, {
         get: function get() {
-            var referenceIDS = stateProvider()[key];
-            return referenceIDS.map(function (id) {
-                return store.models[type.arrayOfType.model].observe(id);
-            });
+            if (stateProvider()) {
+                var referenceIDS = stateProvider()[key];
+                this['_' + key] = referenceIDS.map(function (id) {
+                    return store.models[type.arrayOfType.model].observe(id);
+                });
+            }
+            return this['_' + key];
         },
         set: function set(value) {
             subscribers.forEach(function (it) {
                 return it.unsubscribe();
             });
             var transformedArray = transformReferenceArray(value);
-            stateProvider()[key] = transformedArray;
-            subscribers = transformedArray.map(function (id) {
-                return store.subscribeEntity(type.arrayOfType.model, id).subscribe(function (_) {
-                    updateState();
+            if (stateProvider()) {
+                stateProvider()[key] = transformedArray;
+                subscribers = transformedArray.map(function (id) {
+                    return store.subscribeEntity(type.arrayOfType.model, id).subscribe(function (_) {
+                        updateState();
+                    });
                 });
-            });
-            updateState();
+                updateState();
+            } else {
+                warnNoEntity(item);
+            }
         }
     });
 };
