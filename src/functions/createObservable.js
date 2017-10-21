@@ -62,7 +62,7 @@ const setObservableReference = (item, key, type, stateProvider, updateState, sto
                 if (referenceID)
                     this['_' + key] = store.models[type.model].observe(referenceID);
                 else
-                    this['_' + key] = null
+                    this['_' + key] = null;
             }
             return this['_' + key]
             
