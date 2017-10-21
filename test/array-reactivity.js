@@ -31,8 +31,6 @@ describe('Model with array relationship', function () {
 
     it('should have 1 friend', function(){
         vasya.friends = [petya];
-        console.log(Store.heap);
-        console.log("HELP ME PLEASE", petya);
         assert.equal(vasya.friends[0].name, petya.name);
     });
 

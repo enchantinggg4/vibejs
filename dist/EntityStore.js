@@ -72,6 +72,11 @@ var EntityStore = function () {
         value: function entityExists(name, id) {
             return !!this.heap[name][id];
         }
+    }, {
+        key: 'toJSON',
+        value: function toJSON() {
+            return this.heap;
+        }
     }]);
 
     return EntityStore;

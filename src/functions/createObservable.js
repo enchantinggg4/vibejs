@@ -1,4 +1,33 @@
 import { types } from '../Model';
+import {isAttribute, isReference, isIdentificator, isAttributeArray, isReferenceArray} from './typeChecker';
+
+export const transformAttribute = (attribute) => {
+    return attribute;
+}
+
+export const transformReference = (reference) => {
+    const isNumber = (v) => typeof (v) === 'number' || v instanceof Number
+    if (isNumber(reference)) {
+        // reference by id
+        return reference;
+    } else if (!reference) {
+        // nullate relation
+        return null;
+    } else if (reference.id)
+        // reference by entity
+        return reference.id;
+    else
+        // whatever else is shit
+        return null;
+    
+}
+
+export const transformReferenceArray = (array) => {
+    if(Array.isArray(array))
+        return array.map(it => transformReference(it));
+    else
+        return []
+}
 
 const setObservableAttribute = (item, key, type, stateProvider, updateState, store) => {
     Object.defineProperty(item, key, {
@@ -6,7 +35,7 @@ const setObservableAttribute = (item, key, type, stateProvider, updateState, sto
             return stateProvider()[key];
         },
         set(value) {
-            stateProvider()[key] = value;
+            stateProvider()[key] = transformAttribute(value);
             updateState();
         }
     })
@@ -25,21 +54,8 @@ const setObservableReference = (item, key, type, stateProvider, updateState, sto
             if (subscriber)
                 subscriber.unsubscribe();
 
-            const isNumber = (v) => typeof (v) === 'number' || v instanceof Number
-            if (isNumber(value)) {
-                // reference by id
-                stateProvider()[key] = value;
-            } else if (!value) {
-                // nullate relation
-                stateProvider()[key] = null;
-            } else {
-                if (value.id)
-                    stateProvider()[key] = value.id;
-                else
-                    throw new Error("Expected object with identificator, got", value);
-            }
-
-            const referenceID = stateProvider()[key]
+            const referenceID = transformReference(value);
+            stateProvider()[key] = referenceID;
 
             if (referenceID) {
                 subscriber = store.subscribeEntity(type.model, referenceID).subscribe(_ => {
@@ -60,26 +76,9 @@ const setObservableReferenceArray = (item, key, type, stateProvider, updateState
         },
         set(value) {
             subscribers.forEach(it => it.unsubscribe());
-            if (Array.isArray(value)) {
-                if (value.length === 0) {
-                    stateProvider()[key] = [];
-                } else {
-                    stateProvider()[key] = value.map(item => {
-                        const isNumber = (v) => typeof (v) === 'number' || v instanceof Number
-                        if (isNumber(item)) {
-                            //set by id
-                            return item
-                        } else if (!item) {
-                            return null;
-                        } else {
-                            return item.id
-                        }
-                    });
-                }
-            } else {
-                throw new Error("Expected array got ", value)
-            }
-            subscribers = stateProvider()[key].map(id => {
+            const transformedArray = transformReferenceArray(value);
+            stateProvider()[key] = transformedArray;
+            subscribers = transformedArray.map(id => {
                 return store.subscribeEntity(type.arrayOfType.model, id).subscribe(_ => {
                     updateState();
                 })
@@ -101,83 +100,85 @@ const setFreezedId = (item, value) => {
     })
 }
 
+const collectObservable = (observable, structure, deepness) => {
+    const json = {};
+    Object.keys(structure).forEach(key => {
+        if(isAttribute(structure[key])){
+            json[key] = observable[key];
+        }else if(isReference(structure[key])){
+            if (observable[key] && deepness > 0) {
+                json[key] = observable[key].$json(deepness - 1);
+            } else {
+                json[key] = null;
+            }
+        }else if(isReferenceArray(structure[key])){
+            json[key] = deepness > 0 && observable[key].map(it => {
+                if (it) {
+                    return it.$json(deepness - 1)
+                } else {
+                    return null;
+                }
+            }) || [];
+        }else if(isAttributeArray(structure[key])){
+            json[key] = observable[key];
+        }else if(isIdentificator(structure[key])){
+            json[key] = observable[key];            
+        }else{
+            // console.log(JSON.stringify(structure), key, observable)
+            json[key] = collectObservable(observable[key], structure[key], deepness)
+        }
+    });
+    return json;
+}
 
-const setObservableObject = (item, key, stateProvider, updateState, store) => {
-    createObservable(item[key],)
+
+const createObservableObject = (reactiveItem = {}, structure, stateProvider, updateState, store) => {
+    Object.keys(structure).forEach(key => {
+        if(isAttribute(structure[key])){
+            setObservableAttribute(reactiveItem, key, structure[key], stateProvider, updateState, store);            
+        }else if(isReference(structure[key])){
+            setObservableReference(reactiveItem, key, structure[key], stateProvider, updateState, store);            
+        }else if(isAttributeArray(structure[key])){     
+            setObservableAttribute(reactiveItem, key, structure[key], stateProvider, updateState, store);            
+        }else if(isReferenceArray(structure[key])){ 
+            setObservableReferenceArray(reactiveItem, key, structure[key], stateProvider, updateState, store);            
+        }else if(isIdentificator(structure[key])){
+            setFreezedId(reactiveItem, reactiveItem["id"]);            
+        }else{
+            reactiveItem[key] = {};
+            createObservableObject(reactiveItem[key], structure[key], () => stateProvider()[key], updateState, store);            
+        }
+
+    });
+    reactiveItem.$json = function(deepness = 2){
+        return collectObservable(reactiveItem, structure, deepness)
+    };
+
+    return reactiveItem;
+}
+
+const merge = (structure, objectToMerge, stateProvider, updateState) => {
+    Object.keys(objectToMerge).forEach(key => {
+        if(isAttribute(structure[key])){
+            stateProvider()[key] = transformAttribute(objectToMerge[key]);
+        }else if(isReference(structure[key])){
+            stateProvider()[key] = transformReference(objectToMerge[key]);
+        }else if(isAttributeArray(structure[key])){     
+            stateProvider()[key] = transformAttribute(objectToMerge[key]);          
+        }else if(isReferenceArray(structure[key])){
+            stateProvider()[key] = transformReferenceArray(objectToMerge[key]);                          
+        }else{
+            merge(structure[key], objectToMerge[key], () => stateProvider()[key], updateState)
+        }
+    });
 }
 
 
 export default function createObservable (reactiveItem = {}, structure, stateProvider, updateState, store) {
-    Object.keys(structure).forEach(key => {
-        if (structure[key].type === types.Reference().type) {
-            setObservableReference(reactiveItem, key, structure[key], stateProvider, updateState, store);
-        } else if (structure[key].type === types.Array().type && structure[key].arrayOfType.type === types.Reference().type) {
-            // todo array methods proxy
-            setObservableReferenceArray(reactiveItem, key, structure[key], stateProvider, updateState, store);
-        } else if (structure[key].type === types.Array().type && structure[key].arrayOfType.type !== types.Reference().type) {
-            // todo array methods proxy
-            setObservableAttribute(reactiveItem, key, structure[key], stateProvider, updateState, store);
-        } else if (structure[key].type === types.Identificator.type) {
-            setFreezedId(reactiveItem, reactiveItem["id"]);
-        } else if (structure[key].type === types.String.type) {
-            setObservableAttribute(reactiveItem, key, structure[key], stateProvider, updateState, store);
-        } else if (structure[key].type === types.Number.type) {
-            setObservableAttribute(reactiveItem, key, structure[key], stateProvider, updateState, store);
-        } else if (structure[key].type === types.Boolean.type) {
-            setObservableAttribute(reactiveItem, key, structure[key], stateProvider, updateState, store);
-        } else {
-            reactiveItem[key] = createObservable({}, structure[key], () => stateProvider()[key], updateState, store);
-        }
-
-    });
-    reactiveItem.$json = function(){
-        const json = {};
-        Object.keys(structure).forEach(key => {
-            if (structure[key].type === 'Reference') {
-                if (this[key]) {
-                    json[key] = this[key].$json();
-                } else {
-                    json[key] = null;
-                }
-            }else if (structure[key].type === 'Array' && structure[key].arrayOfType.type === types.Reference().type) {
-                json[key] = this[key].map(it => {
-                    if (it) {
-                        return it.$json();
-                    } else {
-                        return null;
-                    }
-                })
-            
-            }else if(this[key].$json){
-                json[key] = this[key].$json();
-            }else{
-                json[key] = reactiveItem[key];
-            }
-        });
-        return json;
-    }
+    createObservableObject(reactiveItem, structure, stateProvider, updateState, store);
     reactiveItem.$merge = function(objectToMerge){
-        Object.keys(objectToMerge).forEach(key => {
-            if (structure[key].type === types.Reference().type) {
-                reactiveItem[key] = objectToMerge[key];
-            } else if (structure[key].type === types.Array().type && structure[key].arrayOfType.type === types.Reference().type) {
-                // todo array methods proxy
-                reactiveItem[key] = objectToMerge[key];
-            } else if (structure[key].type === types.Array().type && structure[key].arrayOfType.type !== types.Reference().type) {
-                // todo array methods proxy
-                reactiveItem[key] = objectToMerge[key];
-            } else if (structure[key].type === types.Identificator.type) {
-                
-            } else if (structure[key].type === types.String.type) {
-                reactiveItem[key] = objectToMerge[key];
-            } else if (structure[key].type === types.Number.type) {
-                reactiveItem[key] = objectToMerge[key];
-            } else if (structure[key].type === types.Boolean.type) {
-                reactiveItem[key] = objectToMerge[key];
-            } else {
-                reactiveItem[key].$merge(objectToMerge[key]);
-            }
-        })
+        merge(structure, objectToMerge, stateProvider, updateState);
+        updateState();
     }
     return reactiveItem;
 }

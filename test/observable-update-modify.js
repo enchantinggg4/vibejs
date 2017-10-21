@@ -46,4 +46,17 @@ describe('Observable merge', function () {
         assert.equal(vasya.wrapped.number, 15)
         assert.equal(vasya.friend.name, "Petya")
     });
+
+    it('should only spawn 1 change', function(){
+        let updates = 0;
+        vasya.$observable.subscribe(_ => updates += 1 );
+        vasya.$merge({
+            name: "Cock sucker",
+            wrapped: {
+                number: 15
+            },
+            friend: 2
+        });
+        assert.equal(updates, 1);
+    })
 })
