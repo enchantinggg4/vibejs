@@ -1,5 +1,10 @@
 import { types } from '../Model';
-import {isAttribute, isReference, isIdentificator, isAttributeArray, isReferenceArray} from './typeChecker';
+import { isAttribute, isReference, isIdentificator, isAttributeArray, isReferenceArray } from './typeChecker';
+
+
+const warnNoEntity = (name, id) => {
+    console.warn("Trying to modify deleted entity", name, id)
+}
 
 export const transformAttribute = (attribute) => {
     return attribute;
@@ -19,11 +24,11 @@ export const transformReference = (reference) => {
     else
         // whatever else is shit
         return null;
-    
+
 }
 
 export const transformReferenceArray = (array) => {
-    if(Array.isArray(array))
+    if (Array.isArray(array))
         return array.map(it => transformReference(it));
     else
         return []
@@ -32,11 +37,18 @@ export const transformReferenceArray = (array) => {
 const setObservableAttribute = (item, key, type, stateProvider, updateState, store) => {
     Object.defineProperty(item, key, {
         get() {
-            return stateProvider()[key];
+            if (stateProvider()) {
+                this['_' + key] = stateProvider()[key]
+            }
+            return this['_' + key];
         },
         set(value) {
-            stateProvider()[key] = transformAttribute(value);
-            updateState();
+            if (stateProvider()) {
+                stateProvider()[key] = transformAttribute(value);
+                updateState();
+            } else {
+                warnNoEntity(item)
+            }
         }
     })
 }
@@ -45,24 +57,32 @@ const setObservableReference = (item, key, type, stateProvider, updateState, sto
     let subscriber = null;
     Object.defineProperty(item, key, {
         get() {
-            const referenceID = stateProvider()[key];
-            if (referenceID)
-                return store.models[type.model].observe(referenceID);
-            return null;
+            if (stateProvider()) {
+                const referenceID = stateProvider()[key];
+                if (referenceID)
+                    this['_' + key] = store.models[type.model].observe(referenceID);
+                else
+                    this['_' + key] = null
+            }
+            return this['_' + key]
+            
         },
         set(value) {
             if (subscriber)
                 subscriber.unsubscribe();
 
             const referenceID = transformReference(value);
-            stateProvider()[key] = referenceID;
-
-            if (referenceID) {
-                subscriber = store.subscribeEntity(type.model, referenceID).subscribe(_ => {
-                    updateState();
-                })
+            if (stateProvider()) {
+                stateProvider()[key] = referenceID;
+                if (referenceID) {
+                    subscriber = store.subscribeEntity(type.model, referenceID).subscribe(_ => {
+                        updateState();
+                    })
+                }
+                updateState();
+            } else {
+                warnNoEntity(item)
             }
-            updateState();
         }
     })
 };
@@ -71,19 +91,26 @@ const setObservableReferenceArray = (item, key, type, stateProvider, updateState
     let subscribers = [];
     Object.defineProperty(item, key, {
         get() {
-            const referenceIDS = stateProvider()[key];
-            return referenceIDS.map(id => store.models[type.arrayOfType.model].observe(id));
+            if(stateProvider()){
+                const referenceIDS = stateProvider()[key];
+                this['_' + key] = referenceIDS.map(id => store.models[type.arrayOfType.model].observe(id));
+            }
+            return this['_' + key]
         },
         set(value) {
             subscribers.forEach(it => it.unsubscribe());
             const transformedArray = transformReferenceArray(value);
-            stateProvider()[key] = transformedArray;
-            subscribers = transformedArray.map(id => {
-                return store.subscribeEntity(type.arrayOfType.model, id).subscribe(_ => {
-                    updateState();
+            if (stateProvider()) {
+                stateProvider()[key] = transformedArray;
+                subscribers = transformedArray.map(id => {
+                    return store.subscribeEntity(type.arrayOfType.model, id).subscribe(_ => {
+                        updateState();
+                    })
                 })
-            })
-            updateState();
+                updateState();
+            } else {
+                warnNoEntity(item)
+            }
         }
     })
 };
@@ -103,15 +130,15 @@ const setFreezedId = (item, value) => {
 const collectObservable = (observable, structure, deepness) => {
     const json = {};
     Object.keys(structure).forEach(key => {
-        if(isAttribute(structure[key])){
+        if (isAttribute(structure[key])) {
             json[key] = observable[key];
-        }else if(isReference(structure[key])){
+        } else if (isReference(structure[key])) {
             if (observable[key] && deepness > 0) {
                 json[key] = observable[key].$json(deepness - 1);
             } else {
                 json[key] = null;
             }
-        }else if(isReferenceArray(structure[key])){
+        } else if (isReferenceArray(structure[key])) {
             json[key] = deepness > 0 && observable[key].map(it => {
                 if (it) {
                     return it.$json(deepness - 1)
@@ -119,11 +146,11 @@ const collectObservable = (observable, structure, deepness) => {
                     return null;
                 }
             }) || [];
-        }else if(isAttributeArray(structure[key])){
+        } else if (isAttributeArray(structure[key])) {
             json[key] = observable[key];
-        }else if(isIdentificator(structure[key])){
-            json[key] = observable[key];            
-        }else{
+        } else if (isIdentificator(structure[key])) {
+            json[key] = observable[key];
+        } else {
             // console.log(JSON.stringify(structure), key, observable)
             json[key] = collectObservable(observable[key], structure[key], deepness)
         }
@@ -134,23 +161,23 @@ const collectObservable = (observable, structure, deepness) => {
 
 const createObservableObject = (reactiveItem = {}, structure, stateProvider, updateState, store) => {
     Object.keys(structure).forEach(key => {
-        if(isAttribute(structure[key])){
-            setObservableAttribute(reactiveItem, key, structure[key], stateProvider, updateState, store);            
-        }else if(isReference(structure[key])){
-            setObservableReference(reactiveItem, key, structure[key], stateProvider, updateState, store);            
-        }else if(isAttributeArray(structure[key])){     
-            setObservableAttribute(reactiveItem, key, structure[key], stateProvider, updateState, store);            
-        }else if(isReferenceArray(structure[key])){ 
-            setObservableReferenceArray(reactiveItem, key, structure[key], stateProvider, updateState, store);            
-        }else if(isIdentificator(structure[key])){
-            setFreezedId(reactiveItem, reactiveItem["id"]);            
-        }else{
+        if (isAttribute(structure[key])) {
+            setObservableAttribute(reactiveItem, key, structure[key], stateProvider, updateState, store);
+        } else if (isReference(structure[key])) {
+            setObservableReference(reactiveItem, key, structure[key], stateProvider, updateState, store);
+        } else if (isAttributeArray(structure[key])) {
+            setObservableAttribute(reactiveItem, key, structure[key], stateProvider, updateState, store);
+        } else if (isReferenceArray(structure[key])) {
+            setObservableReferenceArray(reactiveItem, key, structure[key], stateProvider, updateState, store);
+        } else if (isIdentificator(structure[key])) {
+            setFreezedId(reactiveItem, reactiveItem["id"]);
+        } else {
             reactiveItem[key] = {};
-            createObservableObject(reactiveItem[key], structure[key], () => stateProvider()[key], updateState, store);            
+            createObservableObject(reactiveItem[key], structure[key], () => stateProvider()[key], updateState, store);
         }
 
     });
-    reactiveItem.$json = function(deepness = 2){
+    reactiveItem.$json = function (deepness = 2) {
         return collectObservable(reactiveItem, structure, deepness)
     };
 
@@ -159,24 +186,24 @@ const createObservableObject = (reactiveItem = {}, structure, stateProvider, upd
 
 const merge = (structure, objectToMerge, stateProvider, updateState) => {
     Object.keys(objectToMerge).forEach(key => {
-        if(isAttribute(structure[key])){
+        if (isAttribute(structure[key])) {
             stateProvider()[key] = transformAttribute(objectToMerge[key]);
-        }else if(isReference(structure[key])){
+        } else if (isReference(structure[key])) {
             stateProvider()[key] = transformReference(objectToMerge[key]);
-        }else if(isAttributeArray(structure[key])){     
-            stateProvider()[key] = transformAttribute(objectToMerge[key]);          
-        }else if(isReferenceArray(structure[key])){
-            stateProvider()[key] = transformReferenceArray(objectToMerge[key]);                          
-        }else{
+        } else if (isAttributeArray(structure[key])) {
+            stateProvider()[key] = transformAttribute(objectToMerge[key]);
+        } else if (isReferenceArray(structure[key])) {
+            stateProvider()[key] = transformReferenceArray(objectToMerge[key]);
+        } else {
             merge(structure[key], objectToMerge[key], () => stateProvider()[key], updateState)
         }
     });
 }
 
 
-export default function createObservable (reactiveItem = {}, structure, stateProvider, updateState, store) {
+export default function createObservable(reactiveItem = {}, structure, stateProvider, updateState, store) {
     createObservableObject(reactiveItem, structure, stateProvider, updateState, store);
-    reactiveItem.$merge = function(objectToMerge){
+    reactiveItem.$merge = function (objectToMerge) {
         merge(structure, objectToMerge, stateProvider, updateState);
         updateState();
     }

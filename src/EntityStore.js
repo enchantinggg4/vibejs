@@ -23,6 +23,12 @@ export default class EntityStore{
             observable.next(this.heap[name][value.id]);
     }
 
+
+    deleteEntity(name, id){
+        delete this.heap[name][id];
+        this.deleteObservable(name, id);
+    }
+
     subscribeEntity(name, id){
         if(!this.getEntityObservable(name, id))
             return this.createEntityObservable(name, id)
@@ -44,8 +50,17 @@ export default class EntityStore{
         const observable = this.getEntityObservable(name, id);
         if(observable)
             observable.next(this.heap[name][id])
-    
+    }
 
+    deleteObservable(name, id){
+        const observableKey = JSON.stringify({ name, id });
+        if(this.observables[observableKey]){
+            this.observables[observableKey].complete();
+            this.observables[observableKey].observers.forEach(subscriber => {
+                subscriber.unsubscribe();
+            });
+        }
+        delete this.observables[observableKey];
     }
 
     entityExists(name, id){

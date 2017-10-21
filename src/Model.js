@@ -97,9 +97,17 @@ export default class Model {
             id: id
         };
 
-        this.store.subscribeEntity(this.name, id).subscribe(a => {
-            observable.next();
-        })
+        this.store.subscribeEntity(this.name, id).subscribe(
+            function (value) {
+                observable.next(value)
+            },
+            function (err) {
+                observable.error(err)
+            },
+            function () {
+                observable.complete() 
+                // clear all subscriptions and just jsonify it
+            })
 
         const reactiveItem = createObservable(
             placeholder,
@@ -107,6 +115,10 @@ export default class Model {
             () => this.store.heap[this.name][id],
             () => this.store.updateEntity(this.name, id),
             this.store);
+
+        reactiveItem.$delete = function () {
+            this.store.deleteEntity(this.name, reactiveItem.id);
+        }.bind(this);
 
         Object.keys(this.computed).forEach(key => {
             setComputedProperty(reactiveItem, key, this.computed[key])
