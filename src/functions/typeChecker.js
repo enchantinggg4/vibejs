@@ -6,8 +6,8 @@ export const isAttribute = (type) => {
 
 
 
-export const isIdentificator = (type) => {
-    return type.type === types.Identificator.type;
+export const isIdentifier = (type) => {
+    return type.type === types.Identifier.type;
 }
 
 export const isReference = (type) => {

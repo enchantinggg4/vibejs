@@ -9,7 +9,7 @@ export default class Model {
         this.computed = options.computed || {};
         this.structure = options.structure || {};
         this.mutations = options.mutations || {};
-        this.structure.id = types.Identificator;
+        this.structure.id = types.Identifier;
         this.store = null;
     }
 

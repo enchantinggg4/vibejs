@@ -6,8 +6,8 @@ export default  {
             return null;
         }
     },
-    Identificator: {
-        type: 'Identificator',
+    Identifier: {
+        type: 'Identifier',
     },
     Array: (Type) => {
         return {

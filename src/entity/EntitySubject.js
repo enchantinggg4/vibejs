@@ -134,10 +134,6 @@ export default class {
                                 store.entityUpdated(entitySubject.name, entitySubject.id, source);
                             });
                         }
-
-
-
-
                     }
                 })
             } else if (TypeChecker.isAttributeArray(structure[key])) {
@@ -185,7 +181,7 @@ export default class {
                         stateProvider.set(key, subjects.map(it => it.id));
                     }
                 })
-            } else if (TypeChecker.isIdentificator(structure[key])) {
+            } else if (TypeChecker.isIdentifier(structure[key])) {
                 Object.defineProperty(item, key, {
                     get() {
                         return entitySubject.id;

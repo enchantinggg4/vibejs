@@ -167,7 +167,7 @@ export default class {
                         });
                     }
                 })
-            } else if (TypeChecker.isIdentificator(structure[key])) {
+            } else if (TypeChecker.isIdentifier(structure[key])) {
                 Object.defineProperty(item, key, {
                     get() {
                         return directorySubject.id;
