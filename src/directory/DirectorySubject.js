@@ -32,7 +32,7 @@ export default class {
     }
 
     update() {
-        this.observable.next();
+        this.observable.next(this.state);
     }
 
 
