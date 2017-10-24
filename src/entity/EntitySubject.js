@@ -64,6 +64,7 @@ export default class {
             return null;
         }
     }
+    
 
     _applyComputed(reactiveInterface){
         Object.entries(this.model.computed).forEach(([key, value]) => {
