@@ -1,0 +1,233 @@
+import R from 'ramda';
+import * as TypeChecker from '../functions/typeChecker';
+import Mutation from './Mutation';
+
+export default class {
+    constructor(name, id, observable, model, store) {
+        this.name = name;
+        this.id = id;
+        this.model = model;
+        this.observable = observable;
+        this.store = store;
+        this.subscriptions = {};
+        Object.entries(store.models).forEach(([key, value]) => {
+            this.subscriptions[key] = {};
+        });
+
+        this.interface = this.createReactiveInterface();
+
+        this.subscriptions[name][id] = this.observable.filter(({ payload, source }) => source !== this);
+        this.subscriptions[name][id].subscribe(({ payload, source }) => {
+            this.updateInterface();
+        }, error => {
+
+        }, complete => {
+
+        });
+    }
+
+    updateInterface() {
+        this.interface = this.createReactiveInterface();
+    }
+
+    mutate(mutation, message = "") {
+        if (this.store.heap[this.name][this.id]) {
+            new Mutation(this, mutation).commit(message)
+        } else {
+            throw new Error(`Trying to modify not existing entity`);
+        }
+    }
+    
+
+    createReactiveInterface() {
+        if (this.store.heap[this.name][this.id]) {
+            const get = (key) => {
+                if (this.store.heap[this.name][this.id])
+                    return this.store.heap[this.name][this.id][key];
+                else
+                    throw new Error(`Trying to read not existing entity`)
+            }
+            const set = (key, value) => {
+                this.mutate({
+                    [key]: value
+                }, `Modify ${key} with value ${value}`)
+            }
+            const reactiveInterface = {};
+            this._mapObserverToSource(reactiveInterface, this.model.structure, {
+                get,
+                set
+            });
+            this._applyComputed(reactiveInterface);
+            this._applyMutations(reactiveInterface);
+            return reactiveInterface;
+        } else {
+            return null;
+        }
+    }
+
+    _applyComputed(reactiveInterface){
+        Object.entries(this.model.computed).forEach(([key, value]) => {
+            reactiveInterface[key] = value.call(reactiveInterface)
+        });
+    }
+
+    _applyMutations(reactiveInterface){
+        Object.entries(this.model.mutations).forEach(([key, value]) => {
+            reactiveInterface[key] = value.bind(reactiveInterface)
+        })
+    }
+
+    _mapObserverToSource(item = {}, structure, stateProvider) {
+        const store = this.store;
+        const entitySubject = this;
+        Object.entries(structure).forEach(([key, value]) => {
+            if (TypeChecker.isAttribute(structure[key])) {
+                Object.defineProperty(item, key, {
+                    get() {
+                        return stateProvider.get(key);
+                    },
+                    set(value) {
+                        stateProvider.set(key, value);
+                    }
+                })
+            } else if (TypeChecker.isReference(structure[key])) {
+                const relationName = structure[key].model;
+                const relationID = stateProvider.get(key);
+                let initialSubject = null;
+                if (relationID) {
+                    initialSubject = store.getOrCreateEntitySubject(relationName, relationID);
+                    if (entitySubject.isSubscriberOf(relationName, relationID)) {
+
+                    } else {
+                        entitySubject.subscribe(relationName, relationID)(({ payload, source }) => {
+                            store.entityUpdated(entitySubject.name, entitySubject.id, source);
+                        });
+                    }
+                }
+                Object.defineProperty(item, key, {
+                    get() {
+                        return R.path(['interface'], initialSubject);
+                    },
+                    set(value) {
+                        if(initialSubject){
+                            entitySubject.unsubscribe(relationName, initialSubject.id);
+                        }
+                        stateProvider.set(key, value);
+                        if(value){
+                            
+
+                            initialSubject = store.getOrCreateEntitySubject(relationName, value);
+                            entitySubject.subscribe(relationName, value)(({ payload, source }) => {
+                                store.entityUpdated(entitySubject.name, entitySubject.id, source);
+                            });
+                        }
+                    }
+                })
+            } else if (TypeChecker.isAttributeArray(structure[key])) {
+                Object.defineProperty(item, key, {
+                    get() {
+                        return stateProvider.get(key);
+                    },
+                    set(value) {
+                        stateProvider.set(key, value);
+                    }
+                })
+            } else if (TypeChecker.isReferenceArray(structure[key])) {
+                const relationName = structure[key].arrayOfType.model;
+                const relationIDs = stateProvider.get(key);
+                let subjects = [];
+                subjects = relationIDs.map(relationID => {
+                    const subject = store.getOrCreateEntitySubject(relationName, relationID);
+                    if (entitySubject.isSubscriberOf(relationName, relationID)) {
+
+                    } else {
+                        entitySubject.subscribe(relationName, relationID)(({ payload, source }) => {
+                            store.entityUpdated(entitySubject.name, entitySubject.id, source);
+                        });
+                    }
+                    return subject;
+                });
+                Object.defineProperty(item, key, {
+                    get() {
+                        return subjects.map(it => it.interface);
+                    },
+                    set(relationIDs) {
+                        stateProvider.set(key, relationIDs);
+                        subjects.forEach(subject => {
+                            entitySubject.unsubscribe(relationName, subject.id);
+                        })
+
+                        subjects = relationIDs.map(relationID => {
+                            const subject = store.getOrCreateEntitySubject(relationName, relationID);
+                            if (entitySubject.isSubscriberOf(relationName, relationID)) {
+
+                            } else {
+                                entitySubject.subscribe(relationName, relationID)(({ payload, source }) => {
+                                    store.entityUpdated(entitySubject.name, entitySubject.id, source);
+                                });
+                            }
+                            return subject;
+                        });
+                    }
+                })
+            } else if (TypeChecker.isIdentificator(structure[key])) {
+                Object.defineProperty(item, key, {
+                    get() {
+                        return entitySubject.id;
+                    },
+                    set(value) {
+
+                    }
+                })
+            } else {
+                const get = (key2) => {
+                    if (stateProvider.get(key))
+                        return stateProvider.get(key)[key2];
+                    else
+                        throw new Error(`Trying to read not existing entity`)
+                }
+                const set = (key2, value) => {
+                    stateProvider.set(key, {
+                        [key2]: value
+                    })
+                }
+                const wrappedItem = {};
+                this._mapObserverToSource(wrappedItem, structure[key], {
+                    get,
+                    set
+                })
+                item[key] = wrappedItem;
+
+            }
+        })
+    }
+
+    equals(entitySubject) {
+        return this === entitySubject;
+    }
+
+
+    isSubscriberOf(name, id) {
+        return this.subscriptions[name][id];
+    }
+
+    subscribe(name, id) {
+        return (a, b, c) => {
+            this.subscriptions[name][id] = this.store.getOrCreateEntitySubject(name, id).observable
+                .filter(({ payload, source }) => source !== this)
+                .subscribe(a, b, c);
+        }
+    }
+
+    unsubscribe(name, id) {
+        if (this.subscriptions[name][id]) {
+            this.subscriptions[name][id].unsubscribe();
+        }
+        delete this.subscriptions[name][id];
+    }
+
+
+    toString() {
+        return `"${this.name}.${this.id}"`
+    }
+}
