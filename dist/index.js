@@ -3,7 +3,6 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.types = exports.EntityStore = exports.DirectoryMutation = exports.DirectorySubject = exports.Directory = exports.EntityMutation = exports.EntitySubject = exports.Model = undefined;
 
 var _Model = require('./entity/Model');
 
@@ -43,14 +42,16 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
  * 
  */
 
-exports.Model = _Model2.default;
-exports.EntitySubject = _EntitySubject2.default;
-exports.EntityMutation = _Mutation2.default;
-exports.Directory = _Directory2.default;
-exports.DirectorySubject = _DirectorySubject2.default;
-exports.DirectoryMutation = _DirectoryMutation2.default;
-exports.EntityStore = _EntityStore2.default;
-exports.types = _types2.default;
+exports.default = {
+  Model: _Model2.default,
+  EntitySubject: _EntitySubject2.default,
+  EntityMutation: _Mutation2.default,
+  Directory: _Directory2.default,
+  DirectorySubject: _DirectorySubject2.default,
+  DirectoryMutation: _DirectoryMutation2.default,
+  EntityStore: _EntityStore2.default,
+  types: _types2.default
+};
 
 /**
  * 

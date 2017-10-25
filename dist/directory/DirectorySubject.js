@@ -77,7 +77,7 @@ var _class = function () {
     }, {
         key: 'update',
         value: function update() {
-            this.observable.next();
+            this.observable.next(this.state);
         }
     }, {
         key: 'createReactiveInterface',
@@ -239,7 +239,7 @@ var _class = function () {
                             });
                         }
                     });
-                } else if (TypeChecker.isIdentificator(structure[key])) {
+                } else if (TypeChecker.isIdentifier(structure[key])) {
                     Object.defineProperty(item, key, {
                         get: function get() {
                             return directorySubject.id;

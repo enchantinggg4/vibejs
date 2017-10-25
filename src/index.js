@@ -18,10 +18,10 @@ import DirectoryMutation from './directory/DirectoryMutation';
 
 import types from './types'
 
-export {
+export default {
     Model,
     EntitySubject,
-    Mutation as EntityMutation,
+    EntityMutation: Mutation,
     Directory,
     DirectorySubject,
     DirectoryMutation,

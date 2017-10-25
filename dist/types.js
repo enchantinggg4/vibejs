@@ -10,8 +10,8 @@ exports.default = {
             return null;
         }
     },
-    Identificator: {
-        type: 'Identificator'
+    Identifier: {
+        type: 'Identifier'
     },
     Array: function (_Array) {
         function Array(_x) {

@@ -40,7 +40,7 @@ var Model = function () {
         this.computed = options.computed || {};
         this.structure = options.structure || {};
         this.mutations = options.mutations || {};
-        this.structure.id = _types2.default.Identificator;
+        this.structure.id = _types2.default.Identifier;
         this.store = null;
     }
 
@@ -67,7 +67,7 @@ var Model = function () {
                     if (!(key in item)) item[key] = structure[key].default();
                 } else if (TypeChecker.isAttributeArray(structure[key])) {
                     if (!(key in item)) item[key] = structure[key].default();
-                } else if (TypeChecker.isIdentificator(structure[key])) {
+                } else if (TypeChecker.isIdentifier(structure[key])) {
                     // we check this already
                 } else {
                     if (!(key in item)) item[key] = {};

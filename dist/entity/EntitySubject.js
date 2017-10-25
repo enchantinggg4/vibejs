@@ -20,6 +20,10 @@ var _Mutation = require('./Mutation');
 
 var _Mutation2 = _interopRequireDefault(_Mutation);
 
+var _isNumber = require('is-number');
+
+var _isNumber2 = _interopRequireDefault(_isNumber);
+
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
@@ -126,6 +130,19 @@ var _class = function () {
             });
         }
     }, {
+        key: '_processReference',
+        value: function _processReference(value, stateProvider) {
+            if ((0, _isNumber2.default)(value)) {
+                return value;
+            } else if (value == null) {
+                return value;
+            } else if ('id' in value && (0, _isNumber2.default)(value.id)) {
+                return value.id;
+            } else {
+                throw new Error("Invalid reference: expected id, null or subject");
+            }
+        }
+    }, {
         key: '_mapObserverToSource',
         value: function _mapObserverToSource() {
             var item = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
@@ -174,11 +191,12 @@ var _class = function () {
                             if (initialSubject) {
                                 entitySubject.unsubscribe(relationName, initialSubject.id);
                             }
-                            stateProvider.set(key, value);
-                            if (value) {
 
-                                initialSubject = store.getOrCreateEntitySubject(relationName, value);
-                                entitySubject.subscribe(relationName, value)(function (_ref12) {
+                            var refID = entitySubject._processReference(value, stateProvider);
+                            stateProvider.set(key, refID);
+                            if (refID) {
+                                initialSubject = store.getOrCreateEntitySubject(relationName, refID);
+                                entitySubject.subscribe(relationName, refID)(function (_ref12) {
                                     var payload = _ref12.payload,
                                         source = _ref12.source;
 
@@ -219,26 +237,28 @@ var _class = function () {
                             });
                         },
                         set: function set(relationIDs) {
-                            stateProvider.set(key, relationIDs);
                             subjects.forEach(function (subject) {
                                 entitySubject.unsubscribe(_relationName, subject.id);
                             });
-
-                            subjects = relationIDs.map(function (relationID) {
-                                var subject = store.getOrCreateEntitySubject(_relationName, relationID);
-                                if (entitySubject.isSubscriberOf(_relationName, relationID)) {} else {
-                                    entitySubject.subscribe(_relationName, relationID)(function (_ref14) {
+                            subjects = relationIDs.map(function (value) {
+                                var refID = entitySubject._processReference(value, stateProvider);
+                                if (refID) {
+                                    var _initialSubject = store.getOrCreateEntitySubject(_relationName, refID);
+                                    entitySubject.subscribe(_relationName, refID)(function (_ref14) {
                                         var payload = _ref14.payload,
                                             source = _ref14.source;
 
                                         store.entityUpdated(entitySubject.name, entitySubject.id, source);
                                     });
+                                    return _initialSubject;
                                 }
-                                return subject;
                             });
+                            stateProvider.set(key, subjects.map(function (it) {
+                                return it.id;
+                            }));
                         }
                     });
-                } else if (TypeChecker.isIdentificator(structure[key])) {
+                } else if (TypeChecker.isIdentifier(structure[key])) {
                     Object.defineProperty(item, key, {
                         get: function get() {
                             return entitySubject.id;
