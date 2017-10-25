@@ -143,7 +143,7 @@ export default class {
                 Object.defineProperty(item, key, {
                     get() {
                         const extendedArray = subjects.map(it => it.interface);
-                        extendedArray(extendedArray, (newArray) => {
+                        extendArray(extendedArray, (newArray) => {
                             stateProvider.set(key, newArray);
                         });
                         return extendedArray;

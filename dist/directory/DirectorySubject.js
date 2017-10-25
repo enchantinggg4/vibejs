@@ -214,7 +214,7 @@ var _class = function () {
                             var extendedArray = subjects.map(function (it) {
                                 return it.interface;
                             });
-                            extendedArray(extendedArray, function (newArray) {
+                            (0, _extendArray2.default)(extendedArray, function (newArray) {
                                 stateProvider.set(key, newArray);
                             });
                             return extendedArray;
