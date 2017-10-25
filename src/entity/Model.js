@@ -17,6 +17,10 @@ export default class Model {
         this.store = store;
     }
 
+    allEntities(){
+        return this.store.allEntities(this.name);
+    }
+
     fillDefaultValues(structure, item){
         Object.entries(structure).forEach(([key, value]) => {
             if(TypeChecker.isAttribute(structure[key])){

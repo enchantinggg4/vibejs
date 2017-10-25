@@ -1,4 +1,5 @@
-const R = require('ramda')
+import * as R from 'ramda';
+
 import * as TypeChecker from '../functions/typeChecker';
 import DirectoryMutation from './DirectoryMutation';
 import Rx from 'rxjs/Rx';
@@ -108,7 +109,7 @@ export default class {
 
                         initialSubject = store.getOrCreateEntitySubject(relationName, value);
                         directorySubject.subscribe(relationName, value)(({ payload, source }) => {
-                            store.entityUpdated(directorySubject.name, directorySubject.id, source);
+                            directorySubject.update()
                         });
                     }
                 })
@@ -135,7 +136,7 @@ export default class {
 
                     } else {
                         directorySubject.subscribe(relationName, relationID)(({ payload, source }) => {
-                            store.entityUpdated(directorySubject.name, directorySubject.id, source);
+                            directorySubject.update()
                         });
                     }
                     return subject;
@@ -160,7 +161,7 @@ export default class {
 
                             } else {
                                 directorySubject.subscribe(relationName, relationID)(({ payload, source }) => {
-                                    store.entityUpdated(directorySubject.name, directorySubject.id, source);
+                                    directorySubject.update()
                                 });
                             }
                             return subject;

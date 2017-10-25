@@ -1,4 +1,5 @@
-const R = require('ramda')
+import * as R from 'ramda';
+
 import Rx from 'rxjs/Rx';
 import EntitySubject from './entity/EntitySubject';
 
@@ -9,6 +10,12 @@ export default class {
         this.heap = {};
         this.observables = {};
         this.setupModelsAndHeap(models);
+    }
+
+    allEntities(name){
+        return Object.keys(this.heap[name]).map(key => {
+            return this.getOrCreateEntitySubject(name, key);
+        })
     }
 
     updateEntity(name, id, value, source, message=''){
