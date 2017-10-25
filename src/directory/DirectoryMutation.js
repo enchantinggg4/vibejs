@@ -4,6 +4,7 @@ export default class DirectoryMutation{
     constructor(subject, payload){
         this.subject = subject;
         const originalState = subject.directory.state;
+        console.log(R, "HERE WE GO ")
         this.resultState =  R.mergeDeepRight(originalState, payload);
     }
 
