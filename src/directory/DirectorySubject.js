@@ -32,7 +32,7 @@ export default class {
     }
 
     update() {
-        this.observable.next();
+        this.observable.next(this.state);
     }
 
 
@@ -167,7 +167,7 @@ export default class {
                         });
                     }
                 })
-            } else if (TypeChecker.isIdentificator(structure[key])) {
+            } else if (TypeChecker.isIdentifier(structure[key])) {
                 Object.defineProperty(item, key, {
                     get() {
                         return directorySubject.id;

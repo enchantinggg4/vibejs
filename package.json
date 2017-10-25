@@ -10,6 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "is-number": "^4.0.0",
     "ramda": "^0.25.0",
     "rxjs": "^5.5.0"
   },
