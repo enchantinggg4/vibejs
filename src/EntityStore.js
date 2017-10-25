@@ -1,4 +1,4 @@
-import R from 'ramda';
+const R = require('ramda')
 import Rx from 'rxjs/Rx';
 import EntitySubject from './entity/EntitySubject';
 

@@ -1,4 +1,5 @@
-import R from 'ramda';
+// import R from 'ramda';
+const R = require('ramda')
 
 export default class DirectoryMutation{
     constructor(subject, payload){

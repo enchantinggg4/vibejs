@@ -1,4 +1,4 @@
-import R from 'ramda';
+const R = require('ramda')
 import * as TypeChecker from '../functions/typeChecker';
 import DirectoryMutation from './DirectoryMutation';
 import Rx from 'rxjs/Rx';
