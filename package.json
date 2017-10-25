@@ -1,6 +1,6 @@
 {
   "name": "vibejs",
-  "version": "2.1.2",
+  "version": "2.1.3",
   "description": "State management library for javascript",
   "main": "./dist/index.js",
   "scripts": {
