@@ -1,4 +1,4 @@
-import R from 'ramda';
+import * as R from 'ramda';
 
 export default class Mutation{
     constructor(subject, payload){
