@@ -10,9 +10,11 @@
 
 `yarn test`
 
-For now vibejs has 29 tests.
+For now vibejs has 34 tests.
 
-Hi there, this is reactive state management tool for JavaScript.
+## Documentation
+[Github pages](https://vibe-js.github.io/)
+## Core 
 
 There are 3 core concepts:
 1) Model and EntitySubject
