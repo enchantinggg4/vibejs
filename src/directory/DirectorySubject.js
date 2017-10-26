@@ -32,6 +32,43 @@ export default class {
 
     }
 
+    _asObject(structure, item, deepness) {
+        const json = {};
+        Object.entries(structure).forEach(([key, value]) => {
+            if (TypeChecker.isAttribute(structure[key])) {
+                json[key] = item[key];
+            } else if (TypeChecker.isAttributeArray(structure[key])) {
+                json[key] = item[key];
+            } else if (TypeChecker.isReference(structure[key])) {
+                if (deepness > 0 && item[key])
+                    json[key] = item[key].$subject.asObject(deepness - 1);
+                else
+                    json[key] = null;
+            } else if (TypeChecker.isReferenceArray(structure[key])) {
+                if (deepness > 0)
+                    json[key] = item[key].map(inter => {
+                        return inter.$subject.asObject(deepness - 1);
+                    })
+                else
+                    json[key] = [];
+            } else if (TypeChecker.isIdentifier(structure[key])) {
+                json[key] = item[key];
+            } else {
+                //object
+                json[key] = this._asObject(structure[key], item[key], deepness);
+            }
+        })
+
+        return json;
+    }
+
+    asObject(relationDeepness) {
+        if (this.interface)
+            return this._asObject(this.directory.structure, this.interface, relationDeepness)
+        else
+            return null;
+    }
+
     update() {
         this.observable.next(this.state);
     }
