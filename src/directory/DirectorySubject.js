@@ -4,6 +4,7 @@ import * as TypeChecker from '../functions/typeChecker';
 import DirectoryMutation from './DirectoryMutation';
 import Rx from 'rxjs/Rx';
 import extendArray from '../functions/extendArray';
+import createReactiveInterface from '../functions/createReactiveInterface';
 
 export default class {
     constructor(directory, store) {
@@ -113,127 +114,25 @@ export default class {
     _mapObserverToSource(item = {}, structure, stateProvider) {
         const store = this.store;
         const directorySubject = this;
-        Object.entries(structure).forEach(([key, value]) => {
-            if (TypeChecker.isAttribute(structure[key])) {
-                Object.defineProperty(item, key, {
-                    get() {
-                        return stateProvider.get(key);
-                    },
-                    set(value) {
-                        stateProvider.set(key, value);
-                    }
-                })
-            } else if (TypeChecker.isReference(structure[key])) {
-                const relationName = structure[key].model;
-                const relationID = stateProvider.get(key);
-                let initialSubject = null;
-                if (relationID) {
-                    initialSubject = store.getOrCreateEntitySubject(relationName, relationID);
-                    if (directorySubject.isSubscriberOf(relationName, relationID)) {
-
-                    } else {
-                        directorySubject.subscribe(relationName, relationID)(({ payload, source }) => {
-                            directorySubject.update();
-                        });
-                    }
+        createReactiveInterface({
+            item: item,
+            stateProvider: stateProvider,
+            store: this.store,
+            updateState(source){
+                directorySubject.update();
+            },
+            structure: this.directory.structure,
+            subscribe(name, id){
+                if (!directorySubject.isSubscriberOf(name, id)) {
+                    directorySubject.subscribe(name, id)(({ payload, source }) => {
+                        directorySubject.update();
+                    });
                 }
-                Object.defineProperty(item, key, {
-                    get() {
-                        return R.path(['interface'], initialSubject);
-                    },
-                    set(value) {
-                        stateProvider.set(key, value);
-
-                        directorySubject.unsubscribe(relationName, value);
-
-                        initialSubject = store.getOrCreateEntitySubject(relationName, value);
-                        directorySubject.subscribe(relationName, value)(({ payload, source }) => {
-                            directorySubject.update()
-                        });
-                    }
-                })
-            } else if (TypeChecker.isAttributeArray(structure[key])) {
-                Object.defineProperty(item, key, {
-                    get() {
-                        const extendedArray = stateProvider.get(key);
-                        extendArray(extendedArray, (newArray) => {
-                            stateProvider.set(key, newArray);
-                        });
-                        return extendedArray;
-                    },
-                    set(value) {
-                        stateProvider.set(key, value);
-                    }
-                })
-            } else if (TypeChecker.isReferenceArray(structure[key])) {
-                const relationName = structure[key].arrayOfType.model;
-                const relationIDs = stateProvider.get(key);
-                let subjects = [];
-                subjects = relationIDs.map(relationID => {
-                    const subject = store.getOrCreateEntitySubject(relationName, relationID);
-                    if (directorySubject.isSubscriberOf(relationName, relationID)) {
-
-                    } else {
-                        directorySubject.subscribe(relationName, relationID)(({ payload, source }) => {
-                            directorySubject.update()
-                        });
-                    }
-                    return subject;
-                });
-                Object.defineProperty(item, key, {
-                    get() {
-                        const extendedArray = subjects.map(it => it.interface);
-                        extendArray(extendedArray, (newArray) => {
-                            stateProvider.set(key, newArray);
-                        });
-                        return extendedArray;
-                    },
-                    set(relationIDs) {
-                        stateProvider.set(key, relationIDs);
-                        subjects.forEach(subject => {
-                            directorySubject.unsubscribe(relationName, subject.id);
-                        })
-
-                        subjects = relationIDs.map(relationID => {
-                            const subject = store.getOrCreateEntitySubject(relationName, relationID);
-                            if (directorySubject.isSubscriberOf(relationName, relationID)) {
-
-                            } else {
-                                directorySubject.subscribe(relationName, relationID)(({ payload, source }) => {
-                                    directorySubject.update()
-                                });
-                            }
-                            return subject;
-                        });
-                    }
-                })
-            } else if (TypeChecker.isIdentifier(structure[key])) {
-                Object.defineProperty(item, key, {
-                    get() {
-                        return directorySubject.id;
-                    },
-                    set(value) {
-
-                    }
-                })
-            } else {
-                const get = (key2) => {
-                    return stateProvider.get(key)[key2];
-                }
-                const set = (key2, value) => {
-                    stateProvider.set(key, {
-                        [key2]: value
-                    })
-                }
-                const wrappedItem = {};
-                this._mapObserverToSource(wrappedItem, structure[key], {
-                    get,
-                    set
-                })
-                item[key] = wrappedItem;
-
+            },
+            unsubscribe(name, id){
+                directorySubject.unsubscribe(name, id)
             }
-        })
+        });
     }
 
     equals(directorySubject) {

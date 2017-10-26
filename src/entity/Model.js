@@ -50,6 +50,8 @@ export default class Model {
             const emptyItem = {};
             this.fillDefaultValues(this.structure, emptyItem);
             this.fillDefaultValues(this.structure, item);
+            emptyItem['id'] = id;
+            item['id'] = id;
             this.store.putEntity(this.name, id, emptyItem);
             this.store.putEntity(this.name, id, item);
         }else{

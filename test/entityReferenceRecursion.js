@@ -30,7 +30,7 @@ describe('Entity recursion reactivity', function () {
 
         User.insertEntity(2, {
             id: 2,
-            name:relatedEntityName,
+            name: relatedEntityName,
             rootReference: 1
         });
 
@@ -43,6 +43,7 @@ describe('Entity recursion reactivity', function () {
         try{
             entity.interface.name = "new name";
         }catch(e){
+            console.log(e);
             hasError = true;
         }
         assert.equal(hasError, false);

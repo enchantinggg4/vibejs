@@ -2,7 +2,12 @@ import * as R from 'ramda';
 import * as TypeChecker from '../functions/typeChecker';
 import Mutation from './Mutation';
 import isNumber from 'is-number'
-export default class {
+import createReactiveInterface from '../functions/createReactiveInterface';
+
+/**
+ * @class {EntitySubject}
+ */
+export default class EntitySubject{
     constructor(name, id, observable, model, store) {
         this.name = name;
         this.id = id;
@@ -132,124 +137,24 @@ export default class {
     }
 
     _mapObserverToSource(item = {}, structure, stateProvider) {
-        const store = this.store;
         const entitySubject = this;
-        Object.entries(structure).forEach(([key, value]) => {
-            if (TypeChecker.isAttribute(structure[key])) {
-                Object.defineProperty(item, key, {
-                    get() {
-                        return stateProvider.get(key);
-                    },
-                    set(value) {
-                        stateProvider.set(key, value);
-                    }
-                })
-            } else if (TypeChecker.isReference(structure[key])) {
-                const relationName = structure[key].model;
-                const relationID = stateProvider.get(key);
-                let initialSubject = null;
-                if (relationID) {
-                    initialSubject = store.getOrCreateEntitySubject(relationName, relationID);
-                    if (entitySubject.isSubscriberOf(relationName, relationID)) {
-
-                    } else {
-                        entitySubject.subscribe(relationName, relationID)(({ payload, source }) => {
-                            store.entityUpdated(entitySubject.name, entitySubject.id, source);
-                        });
-                    }
+        return createReactiveInterface({
+            item: item,
+            stateProvider: stateProvider,
+            store: this.store,
+            updateState(source){
+                this.store.entityUpdated(entitySubject.name, entitySubject.id, source);
+            },
+            structure: this.model.structure,
+            subscribe(name, id){
+                if (!entitySubject.isSubscriberOf(name, id)) {
+                    entitySubject.subscribe(name, id)(({ payload, source }) => {
+                        entitySubject.store.entityUpdated(entitySubject.name, entitySubject.id, source);                        
+                    });
                 }
-                Object.defineProperty(item, key, {
-                    get() {
-                        return R.path(['interface'], initialSubject);
-                    },
-                    set(value) {
-                        if (initialSubject) {
-                            entitySubject.unsubscribe(relationName, initialSubject.id);
-                        }
-
-                        const refID = entitySubject._processReference(value, stateProvider);
-                        stateProvider.set(key, refID);
-                        if (refID) {
-                            initialSubject = store.getOrCreateEntitySubject(relationName, refID);
-                            entitySubject.subscribe(relationName, refID)(({ payload, source }) => {
-                                store.entityUpdated(entitySubject.name, entitySubject.id, source);
-                            });
-                        }
-                    }
-                })
-            } else if (TypeChecker.isAttributeArray(structure[key])) {
-                Object.defineProperty(item, key, {
-                    get() {
-                        return stateProvider.get(key);
-                    },
-                    set(value) {
-                        stateProvider.set(key, value);
-                    }
-                })
-            } else if (TypeChecker.isReferenceArray(structure[key])) {
-                const relationName = structure[key].arrayOfType.model;
-                const relationIDs = stateProvider.get(key);
-                let subjects = [];
-                subjects = relationIDs.map(relationID => {
-                    const subject = store.getOrCreateEntitySubject(relationName, relationID);
-                    if (entitySubject.isSubscriberOf(relationName, relationID)) {
-
-                    } else {
-                        entitySubject.subscribe(relationName, relationID)(({ payload, source }) => {
-                            store.entityUpdated(entitySubject.name, entitySubject.id, source);
-                        });
-                    }
-                    return subject;
-                });
-                Object.defineProperty(item, key, {
-                    get() {
-                        return subjects.map(it => it.interface);
-                    },
-                    set(relationIDs) {
-                        subjects.forEach(subject => {
-                            entitySubject.unsubscribe(relationName, subject.id);
-                        });
-                        subjects = relationIDs.map(value => {
-                            const refID = entitySubject._processReference(value, stateProvider);
-                            if (refID) {
-                                const initialSubject = store.getOrCreateEntitySubject(relationName, refID);
-                                entitySubject.subscribe(relationName, refID)(({ payload, source }) => {
-                                    store.entityUpdated(entitySubject.name, entitySubject.id, source);
-                                });
-                                return initialSubject;
-                            }
-                        });
-                        stateProvider.set(key, subjects.map(it => it.id));
-                    }
-                })
-            } else if (TypeChecker.isIdentifier(structure[key])) {
-                Object.defineProperty(item, key, {
-                    get() {
-                        return entitySubject.id;
-                    },
-                    set(value) {
-
-                    }
-                })
-            } else {
-                const get = (key2) => {
-                    if (stateProvider.get(key))
-                        return stateProvider.get(key)[key2];
-                    else
-                        throw new Error(`Trying to read not existing entity`)
-                }
-                const set = (key2, value) => {
-                    stateProvider.set(key, {
-                        [key2]: value
-                    })
-                }
-                const wrappedItem = {};
-                this._mapObserverToSource(wrappedItem, structure[key], {
-                    get,
-                    set
-                })
-                item[key] = wrappedItem;
-
+            },
+            unsubscribe(name, id){
+                entitySubject.unsubscribe(name, id)
             }
         })
     }
