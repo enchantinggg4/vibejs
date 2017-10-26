@@ -1,5 +1,4 @@
-import * as R from 'ramda';
-
+import R from 'ramda';
 import * as TypeChecker from '../functions/typeChecker';
 import Mutation from './Mutation';
 import isNumber from 'is-number'
@@ -31,6 +30,43 @@ export default class {
         this.interface = this.createReactiveInterface();
     }
 
+    _asObject(structure, item, deepness) {
+        const json = {};
+        Object.entries(structure).forEach(([key, value]) => {
+            if (TypeChecker.isAttribute(structure[key])) {
+                json[key] = item[key];
+            } else if (TypeChecker.isAttributeArray(structure[key])) {
+                json[key] = item[key];
+            } else if (TypeChecker.isReference(structure[key])) {
+                if (deepness > 0 && item[key])
+                    json[key] = item[key].$subject.asObject(deepness - 1);
+                else
+                    json[key] = null;
+            } else if (TypeChecker.isReferenceArray(structure[key])) {
+                if (deepness > 0)
+                    json[key] = item[key].map(inter => {
+                        return inter.$subject.asObject(deepness - 1);
+                    })
+                else
+                    json[key] = [];
+            } else if (TypeChecker.isIdentifier(structure[key])) {
+                json[key] = item[key];
+            } else {
+                //object
+                json[key] = this._asObject(structure[key], item[key], deepness);
+            }
+        })
+
+        return json;
+    }
+
+    asObject(relationDeepness) {
+        if (this.interface)
+            return this._asObject(this.model.structure, this.interface, relationDeepness)
+        else
+            return null;
+    }
+
     mutate(mutation, message = "") {
         if (this.store.heap[this.name][this.id]) {
             new Mutation(this, mutation).commit(message)
@@ -60,6 +96,8 @@ export default class {
             });
             this._applyComputed(reactiveInterface);
             this._applyMutations(reactiveInterface);
+
+            reactiveInterface.$subject = this;
             return reactiveInterface;
         } else {
             return null;
