@@ -1,4 +1,4 @@
-import R from 'ramda';
+import * as R from 'ramda';
 import * as TypeChecker from '../functions/typeChecker';
 import Mutation from './Mutation';
 import isNumber from 'is-number'
