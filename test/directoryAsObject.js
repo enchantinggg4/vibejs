@@ -22,6 +22,11 @@ const directory = new Directory('TestDirectory', {
         wrapped: {
             category: types.Attribute
         }
+    },
+    computed: {
+        someValue(){
+            return this.page + "!"
+        }
     }
 }, Store)
 
@@ -40,7 +45,8 @@ describe('Directory as object', function () {
             author: null,
             wrapped: {
                 category: null
-            }
+            },
+            someValue: null + "!"
         });
     })
     it('should return realtions', function () {
@@ -68,7 +74,8 @@ describe('Directory as object', function () {
             },
             wrapped: {
                 category: null
-            }
+            },
+            someValue: newValue + "!"
 
         });
     });

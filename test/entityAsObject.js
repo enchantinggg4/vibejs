@@ -11,6 +11,11 @@ const User = new Model('User', {
         wrappedObject: {
             wrappedValue: types.Attribute
         }
+    },
+    computed: {
+        someValue(){
+            return this.name + "!";
+        }
     }
 });
 const Store = new EntityStore([User]);
@@ -36,6 +41,7 @@ describe('Entity to object conversion', function () {
         const entity = User.observe(1);
         assert.deepEqual(entity.asObject(1), {
             name: newEntityName,
+            someValue: newEntityName + "!", // computed
             friend: {
                 id: 1,
                 name: newEntityName,
@@ -43,7 +49,8 @@ describe('Entity to object conversion', function () {
                     wrappedValue: wrappedValue
                 },
                 friend: null,
-                friends: []
+                friends: [],
+                someValue: newEntityName + "!" // computed
             },
             friends: [{
                 id: 1,
@@ -52,7 +59,8 @@ describe('Entity to object conversion', function () {
                     wrappedValue: wrappedValue
                 },
                 friend: null,
-                friends: []
+                friends: [],
+                someValue: newEntityName + "!" // computed
             }],
             wrappedObject: {
                 wrappedValue: wrappedValue
@@ -78,6 +86,7 @@ describe('Entity to object conversion', function () {
                 wrappedValue: wrappedValue
             },
             id: 1,
+            someValue: newEntityName + "!" // computed
         });
     });
 
@@ -99,6 +108,7 @@ describe('Entity to object conversion', function () {
                 wrappedValue: wrappedValue
             },
             id: 1,
+            someValue: newEntityName + "!" // computed
         });
     });
 });

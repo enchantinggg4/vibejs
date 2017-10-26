@@ -63,9 +63,12 @@ export default class {
     }
 
     asObject(relationDeepness) {
-        if (this.interface)
-            return this._asObject(this.directory.structure, this.interface, relationDeepness)
-        else
+        if (this.interface){
+            const result = this._asObject(this.directory.structure, this.interface, relationDeepness)
+            this._applyComputed(result);
+            this._applyMutations(result);
+            return result;
+        }else
             return null;
     }
 
