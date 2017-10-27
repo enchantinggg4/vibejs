@@ -4,25 +4,64 @@ import * as TypeChecker from '../functions/typeChecker'
 import {types} from '../entity/Model';
 import DirectorySubject from './DirectorySubject';
 
+/**
+ * @class {Directory}
+ */
 export default class Directory {
-    constructor(name, options = { structure: {}, computed: {} }, store) {
+    /**
+     * Create directory
+     * @param {string} name - directory name
+     * @param {Object} options - structure, computed, mutations
+     * @param {EntityStore} store - {@link EntityStore} instance
+     * @see {@link EntityStore}
+     */
+    constructor(name, options = { structure: {}, computed: {}, mutations: {} }, store) {
+        /**
+         * Directory name
+         * @member {string}
+         */
         this.name = name;
-        this.computed = options.computed || {};
+        /**
+         * Directory structure
+         * @member {Object}
+         */
         this.structure = options.structure || {};
+        /**
+         * Computed values declared in constructor
+         * @member {Object}
+         */
         this.computed = options.computed || {};
+        /**
+         * Methods declared in constructor
+         * @member {Object}
+         */
         this.mutations = options.mutations || {};
-        this.store = store;
+        /**
+         * Local state
+         * @member {Object}
+         */
         this.state = {};
-        this.initialState(this.structure, this.state);
-        this.subject = new DirectorySubject(this, store);
+        this._initialState(this.structure, this.state);
+        /**
+         * Subject of this directory
+         */
+        this._subject = new DirectorySubject(this, store);
     }
 
+    /**
+     * Clear local state and initialise default
+     */
     clear(){
         this.state = {};
-        this.initialState(this.structure, this.state);
+        this._initialState(this.structure, this.state);
     }
 
-    initialState(structure, state){
+    /**
+     * Initialise state
+     * @param {Object} structure - structure to translate
+     * @param {*} state - state where to write
+     */
+    _initialState(structure, state){
         Object.entries(structure).forEach(([key, value]) => {
             if(TypeChecker.isAttribute(structure[key])){
                 state[key] = structure[key].default();
@@ -35,13 +74,17 @@ export default class Directory {
             }else{
                 //object
                 state[key] = {};
-                this.initialState(structure[key], state[key])
+                this._initialState(structure[key], state[key])
             }
         })
     }
 
+    /**
+     * Return {@link DirectorySubject} of this directory
+     * @returns {DirectorySubject}
+     */
     observe(){
-        return this.subject;
+        return this._subject;
     }
     
 }

@@ -1,4 +1,6 @@
-
+/**
+ * @property {Object} [Attribute] - stands for string, boolean or number
+ */
 export default  {
     Attribute: {
         type: 'Attribute',
