@@ -12,8 +12,9 @@
 
 For now vibejs has 34 tests.
 
-## Documentation
+## Documentation and examples
 [Github pages](https://vibe-js.github.io/)
+[Github repo with examples with React (Vue is coming) ](https://github.com/enchantinggg4/vibe-examples)
 ## Core 
 
 There are 3 core concepts:
