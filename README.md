@@ -1,4 +1,4 @@
-# Vibe.js
+# Vibe.js [![Build Status](https://travis-ci.org/enchantinggg4/vibejs.svg?branch=master&lol=1)](https://travis-ci.org/enchantinggg4/vibejs)
 
 ## Install
 
